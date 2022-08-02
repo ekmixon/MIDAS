@@ -31,11 +31,9 @@ class AnalyzeFirewallKeys(object):
         """
         Checks the top level keys of com.apple.alf.plist
         """
-        alf = read_plist('/Library/Preferences/com.apple.alf.plist')
-        if alf:
+        if alf := read_plist('/Library/Preferences/com.apple.alf.plist'):
             for i in Config.get("firewall_keys"):
-                key = str(get_plist_key(alf, i))
-                if key:
+                if key := str(get_plist_key(alf, i)):
                     self.data.append({
                         "name": i,
                         "date": exec_date,

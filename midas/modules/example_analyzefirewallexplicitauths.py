@@ -30,15 +30,11 @@ class AnalyzeFirewallExplicitauths(object):
         """
         Checks the systems firewall explicitauths
         """
-        alf = read_plist('/Library/Preferences/com.apple.alf.plist')
-        if alf:
-            explicitauths = get_plist_key(alf, "explicitauths")
-            if explicitauths:
+        if alf := read_plist('/Library/Preferences/com.apple.alf.plist'):
+            if explicitauths := get_plist_key(alf, "explicitauths"):
                 for i in explicitauths:
                     try:
                         self.data.append({"name": i['id'], "date": exec_date})
-                    except OSError:
-                        pass
                     except Exception:
                         pass
 

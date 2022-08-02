@@ -28,30 +28,27 @@ class AnalyzeFirewallProcesses(object):
         """
         Checks the firewalled processes in the system firewall
         """
-        alf = read_plist('/Library/Preferences/com.apple.alf.plist')
-        if alf:
-            processes = get_plist_key(alf, "firewall")
-            if processes:
-                for key, value in processes.iteritems():
+        if not (alf := read_plist('/Library/Preferences/com.apple.alf.plist')):
+            return
+        if processes := get_plist_key(alf, "firewall"):
+            for key, value in processes.iteritems():
+                try:
+                    name = key
+                    state = str(value['state'])
+                    process = value['proc']
                     try:
-                        name = key
-                        state = str(value['state'])
-                        process = value['proc']
-                        try:
-                            servicebundleid = value['servicebundleid']
-                        except KeyError:
-                            servicebundleid = "KEY DNE"
-                        self.data.append({
-                            "name": name,
-                            "date": exec_date,
-                            "state": state,
-                            "process": process,
-                            "servicebundleid": servicebundleid
-                        })
+                        servicebundleid = value['servicebundleid']
                     except KeyError:
-                        pass
-                    except Exception:
-                        pass
+                        servicebundleid = "KEY DNE"
+                    self.data.append({
+                        "name": name,
+                        "date": exec_date,
+                        "state": state,
+                        "process": process,
+                        "servicebundleid": servicebundleid
+                    })
+                except Exception:
+                    pass
 
     def analyze(self):
         """

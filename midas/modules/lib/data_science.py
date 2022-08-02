@@ -19,10 +19,7 @@ class DataScience():
         self.tablename = tablename
         self.key = key
 
-        if not all_data:
-            self.all_data = self.orm.select(self.tablename)
-        else:
-            self.all_data = all_data
+        self.all_data = all_data or self.orm.select(self.tablename)
 
     def get_all(self):
         """get_all is a simple wrapper around new, changed and removed
@@ -36,10 +33,7 @@ class DataScience():
         not there"""
         if not data or not column or not value:
             return None
-        for i in data:
-            if i[column] == value:
-                return i
-        return None
+        return next((i for i in data if i[column] == value), None)
 
     def get_new_entries(self):
         """get_new_entries returns all new entries in a given dataset"""

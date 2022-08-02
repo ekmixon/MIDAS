@@ -56,11 +56,7 @@ def get_kextfind():
     """
     Returns an array of .kext files
     """
-    kextfind = shell_out("kextfind")
-    if kextfind:
-        return kextfind
-    else:
-        return None
+    return kextfind if (kextfind := shell_out("kextfind")) else None
 
 
 def get_launchctl():
@@ -88,19 +84,13 @@ def strings(executable):
     """
     Returns an array of unique strings found in a supplied executable
     """
-    if isfile(executable):
-        try:
-            strings_list = list(set(shell_out("strings %s" % executable)))
-        except OSError:
-            return []
-        except Exception:
-            return []
-        if strings_list:
-            return strings_list
-        else:
-            return []
-    else:
+    if not isfile(executable):
         return []
+    try:
+        strings_list = list(set(shell_out(f"strings {executable}")))
+    except Exception:
+        return []
+    return strings_list or []
 
 
 def delete_file(filename):
@@ -115,14 +105,12 @@ def installed(program):
     Returns the path of a supplied program if the supplied program is installed
     and returns False if it is not
     """
-    which = shell_out("mdfind -name %s" % program)
-    if which:
-        for i in which:
-            _, fname = split(i)
-            if fname == program:
-                return i
-    else:
+    if not (which := shell_out(f"mdfind -name {program}")):
         return False
+    for i in which:
+        _, fname = split(i)
+        if fname == program:
+            return i
 
 
 def last_user_name():
@@ -148,8 +136,7 @@ def crontab_for_user(user):
     Returns False is a supplied user doesn't have a crontab, and returns the
     crontab (pipes in place of newlines) if the user does have one
     """
-    crontab = filter(None, shell_out("crontab -u %s -l" % user))
-    if crontab:
+    if crontab := filter(None, shell_out(f"crontab -u {user} -l")):
         return '|'.join(crontab)
     else:
         return False
@@ -160,10 +147,7 @@ def last():
     Returns the first two columns of the `last` command
     """
     last_command = shell_out("last")[:-2]
-    last_output = []
-    for i in last_command:
-        last_output.append(filter(None, i.split(" "))[:2])
-    return last_output
+    return [filter(None, i.split(" "))[:2] for i in last_command]
 
 
 def list_users():
@@ -171,11 +155,8 @@ def list_users():
     Returns an array of all 'users' on the system
     """
     users = []
-    dscacheutil = shell_out("dscacheutil -q user")
-    if dscacheutil:
-        for i in dscacheutil:
-            if i.startswith('name: '):
-                users.append(i[6:])
+    if dscacheutil := shell_out("dscacheutil -q user"):
+        users.extend(i[6:] for i in dscacheutil if i.startswith('name: '))
     return users
 
 
@@ -184,18 +165,17 @@ def run_file(filename):
     Returns file information on a given filename. Returns None if file doesn't
     exist
     """
-    if isfile(filename):
-        output = shell_out("file %s" % filename)
-        if output:
-            try:
-                output = output[0]
-            except OSError:
-                return None
-            except:
-                return None
-            if output:
-                return output
-        return None
+    if not isfile(filename):
+        return
+    output = shell_out(f"file {filename}")
+    if output:
+        try:
+            output = output[0]
+        except OSError:
+            return None
+        except:
+            return None
+    return output or None
 
 
 def lsof():
@@ -203,7 +183,6 @@ def lsof():
     Returns a array of lsof -i data
     """
     lsof_output = shell_out("lsof -i")
-    lsof_data = []
     headers = [
         'command',
         'pid',
@@ -217,10 +196,7 @@ def lsof():
     ]
     lsof_output = lsof_output[1:]
 
-    for i in lsof_output:
-        lsof_data.append(dict(zip(headers, filter(None, i.split(" ")))))
-
-    return lsof_data
+    return [dict(zip(headers, filter(None, i.split(" ")))) for i in lsof_output]
 
 
 def is_fde_enabled():
@@ -228,6 +204,4 @@ def is_fde_enabled():
     Returns True if FDE is enabled, False if it is not
     """
     fde = shell_out("fdesetup status")
-    if fde == ['FileVault is On.']:
-        return True
-    return False
+    return fde == ['FileVault is On.']

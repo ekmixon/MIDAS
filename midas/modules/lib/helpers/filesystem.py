@@ -26,10 +26,8 @@ def list_all_in_dir(directory):
     """
     try:
         if not directory.endswith('/'):
-            directory = "%s/" % (directory, )
-    except AttributeError:
-        return []
-    except OSError:
+            directory = f"{directory}/"
+    except (AttributeError, OSError):
         return []
     return [directory + f for f in listdir(directory)]
 
@@ -45,10 +43,8 @@ def list_files_in_dir(directory):
     """
     try:
         if not directory.endswith('/'):
-            directory = "%s/" % (directory, )
-    except AttributeError:
-        return []
-    except OSError:
+            directory = f"{directory}/"
+    except (AttributeError, OSError):
         return []
     return [directory + f for f in listdir(directory)\
             if isfile(join(directory, f))]
@@ -64,10 +60,8 @@ def list_dirs_in_dir(directory):
     """
     try:
         if not directory.endswith('/'):
-            directory = "%s/" % (directory, )
-    except AttributeError:
-        return []
-    except OSError:
+            directory = f"{directory}/"
+    except (AttributeError, OSError):
         return []
     return [directory + f for f in listdir(directory)\
             if isdir(join(directory, f))]
@@ -81,20 +75,19 @@ def get_most_recently_updated_file(directory):
         files = list_files_in_dir(directory)
     except OSError:
         return None
-    if files:
-        try:
-            files = {}
-            for i in files:
-                if not islink(i):
-                    files[i] = getmtime(i)
-            if files:
-                try:
-                    return sorted(files.iteritems(), key=itemgetter(1))[-1][0]
-                except KeyError:
-                    return None
-        except OSError:
-            return None
-    else:
+    if not files:
+        return None
+    try:
+        files = {}
+        for i in files:
+            if not islink(i):
+                files[i] = getmtime(i)
+        if files:
+            try:
+                return sorted(files.iteritems(), key=itemgetter(1))[-1][0]
+            except KeyError:
+                return None
+    except OSError:
         return None
 
 
@@ -130,8 +123,8 @@ def get_documents():
         "numbers"
     ]
     for ext in file_extensions:
-        arg = "kMDItemDisplayName == *.%s" % (ext, )
-        files += shell_out("mdfind %s" % (arg, ))
+        arg = f"kMDItemDisplayName == *.{ext}"
+        files += shell_out(f"mdfind {arg}")
     return filter(None, files)
 
 
@@ -151,39 +144,37 @@ def hash_kext(kextfind, kext):
     else:
         ext_root = join('/System', 'Library', 'Extensions')
 
-        path = join(ext_root,
-                    "%s.kext" % (kext, ),
-                    'Contents', 'MacOS',
-                    kext)
+        path = join(ext_root, f"{kext}.kext", 'Contents', 'MacOS', kext)
 
         if isfile(path):
             return hash_file(path)
 
-        path = join(ext_root,
-                    "Apple%s.kext" % (kext, ),
-                    'Contents', 'MacOS',
-                    "Apple%s" % (kext, ))
+        path = join(ext_root, f"Apple{kext}.kext", 'Contents', 'MacOS', f"Apple{kext}")
 
         if isfile(path):
             return hash_file(path)
 
-        path = join(ext_root, "%s.kext" % (kext, ), kext)
+        path = join(ext_root, f"{kext}.kext", kext)
 
         if isfile(path):
             return hash_file(path)
 
-        path = join('/System', 'Library', 'Filesystems', 'AppleShare',
-                     "%s.kext" % (kext, ),
-                     'Contents', 'MacOS',
-                     kext)
+        path = join(
+            '/System',
+            'Library',
+            'Filesystems',
+            'AppleShare',
+            f"{kext}.kext",
+            'Contents',
+            'MacOS',
+            kext,
+        )
+
 
         if isfile(path):
             return hash_file(path)
 
-    if found is None:
-        return found
-    else:
-        return hash_file(found)
+    return found if found is None else hash_file(found)
 
 
 def list_home_dirs():
@@ -200,10 +191,7 @@ def get_environment_files():
     files = [
         ".MacOS/environment",
     ]
-    env = []
-    for i in product(list_home_dirs(), files):
-        env.append("/".join(i))
-    return env
+    return ["/".join(i) for i in product(list_home_dirs(), files)]
 
 
 def list_recentitems():
@@ -211,11 +199,11 @@ def list_recentitems():
     Returns an array of all com.apple.recentitems files
     """
     files = ["Library/Preferences/com.apple.recentitems.plist"]
-    items = []
-    for i in product(list_home_dirs(), files):
-        if isfile("/".join(i)):
-            items.append("/".join(i))
-    return items
+    return [
+        "/".join(i)
+        for i in product(list_home_dirs(), files)
+        if isfile("/".join(i))
+    ]
 
 
 def find_with_perms(directory, perms):
@@ -229,11 +217,14 @@ def find_with_perms(directory, perms):
     """
     files = []
     for [i, _, _] in walk(directory):
-        if match(r"%s" % (perms, ), oct(stat(i)[ST_MODE])[-3:]):
+        if match(f"{perms}", oct(stat(i)[ST_MODE])[-3:]):
             files.append(i)
-        for fname in list_files_in_dir(i):
-            if match(r"%s" % (perms, ), oct(stat(i)[ST_MODE])[-3:]):
-                files.append(fname)
+        files.extend(
+            fname
+            for fname in list_files_in_dir(i)
+            if match(f"{perms}", oct(stat(i)[ST_MODE])[-3:])
+        )
+
     return files
 
 
@@ -246,10 +237,12 @@ def list_authorized_keys():
         ".ssh2/authorized_keys",
     ]
 
-    keys = []
-    for i in product(["/var/root/"], files):
-        if isfile("/".join(i)):
-            keys.append("/".join(i))
+    keys = [
+        "/".join(i)
+        for i in product(["/var/root/"], files)
+        if isfile("/".join(i))
+    ]
+
     for i in product(list_home_dirs(), files):
         if isfile("/".join(i)):
             keys.append("/".join(i))
@@ -268,24 +261,25 @@ def list_ssh_keys(no_password=False):
         ".ssh/id_rsa",
     ]
 
-    ssh_keys = []
-    for i in product(list_home_dirs(), files):
-        if isfile("/".join(i)):
-            ssh_keys.append("/".join(i))
+    ssh_keys = [
+        "/".join(i)
+        for i in product(list_home_dirs(), files)
+        if isfile("/".join(i))
+    ]
+
     if not no_password:
         return ssh_keys
-    else:
-        no_passphrase = []
-        for key_file in ssh_keys:
-            passphrase = False
-            with open(key_file) as fname:
-                for line in fname:
-                    if "ENCRYPTED" in line:
-                        passphrase = True
-                        break
-                if not passphrase:
-                    no_passphrase.append(key_file)
-        return no_passphrase
+    no_passphrase = []
+    for key_file in ssh_keys:
+        passphrase = False
+        with open(key_file) as fname:
+            for line in fname:
+                if "ENCRYPTED" in line:
+                    passphrase = True
+                    break
+            if not passphrase:
+                no_passphrase.append(key_file)
+    return no_passphrase
 
 
 def list_weak_keys():
@@ -323,9 +317,7 @@ def list_current_host_pref_files():
     files = []
     for home_dir in list_home_dirs():
         try:
-            files += list_files_in_dir(
-                home_dir + "/Library/Preferences/ByHost/"
-            )
+            files += list_files_in_dir(f"{home_dir}/Library/Preferences/ByHost/")
         except OSError:
             pass
 
@@ -365,7 +357,7 @@ def list_homedir_launch_agents():
     files = []
     for home_dir in list_home_dirs():
         try:
-            files += list_files_in_dir(home_dir + "/Library/LaunchAgents/")
+            files += list_files_in_dir(f"{home_dir}/Library/LaunchAgents/")
         except OSError:
             pass
 
@@ -447,21 +439,18 @@ def find_ssh_keys():
     Returns an array of SSH private keys on the host
     """
     keys = []
-    keys1 = shell_out("mdfind kMDItemFSName=='id_*sa'")
-    if keys1:
-        for key in keys1:
-            if key and not match("^/Users/[a-zA-Z0-9]*/.ssh", key):
-                keys.append(key)
+    if keys1 := shell_out("mdfind kMDItemFSName=='id_*sa'"):
+        keys.extend(
+            key
+            for key in keys1
+            if key and not match("^/Users/[a-zA-Z0-9]*/.ssh", key)
+        )
 
-    keys2 = shell_out("mdfind kMDItemFSName=='*.id'")
-    if keys2:
+    if keys2 := shell_out("mdfind kMDItemFSName=='*.id'"):
         for key in keys2:
             try:
                 if isfile(key) and is_ssh_key(key):
                     keys.append(key)
-            except OSError:
-                pass
             except Exception:
                 pass
-
     return keys

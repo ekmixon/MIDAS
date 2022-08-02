@@ -22,8 +22,7 @@ class AnalyzeSomethingComplex(object):
         If the check requires a lot of related tasks that are better
         abstracted out into several functions, make a class
         """
-        var = self.helper_function_1()
-        if var:
+        if var := self.helper_function_1():
             for each in var:
                 self.helper_function_2(each)
 

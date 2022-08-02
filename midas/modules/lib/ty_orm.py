@@ -42,7 +42,7 @@ class TyORM():
         sql_col = "\"%s\" %s" % (i, attr[i]['type'])
         try:
             if attr[i]["default"]:
-                sql_col += " DEFAULT %s" % attr[i]["default"]
+                sql_col += f' DEFAULT {attr[i]["default"]}'
         except KeyError:
             pass
         try:
@@ -52,7 +52,7 @@ class TyORM():
             pass
         try:
             if attr[i]["attrs"]:
-                sql_col += " %s" % attr[i]["attrs"]
+                sql_col += f' {attr[i]["attrs"]}'
         except KeyError:
             pass
         try:
@@ -80,10 +80,8 @@ class TyORM():
         potentially updated table attributes"""
         sql = "PRAGMA table_info(\"%s\")" % table_name
         table_info = self.raw_sql(sql)
-        db_cols = []
         new_cols = attrs.keys()
-        for each in table_info:
-            db_cols.append(each[1])
+        db_cols = [each[1] for each in table_info]
         alter_cols = list(set(new_cols) - set(db_cols))
 
         sql = "ALTER TABLE \"%s\" ADD COLUMN " % table_name
@@ -92,14 +90,14 @@ class TyORM():
         for i in attrs:
             if i in alter_cols:
                 new_attrs[i] = attrs[i]
-                alter_sql = "%s%s%s" % (sql, self.parse_attr(new_attrs), ";")
+                alter_sql = f"{sql}{self.parse_attr(new_attrs)};"
                 self.raw_sql(alter_sql)
                 new_attrs = {}
 
     def create_index(self, indexes):
         """create_index creates a supplied index on a given table"""
         for index in indexes:
-            sql = "CREATE INDEX IF NOT EXISTS %s;" % index
+            sql = f"CREATE INDEX IF NOT EXISTS {index};"
             index = self.raw_sql(sql)
 
     def initialize_table(self, table_name, attrs, indexes=None):
@@ -120,11 +118,11 @@ class TyORM():
         data = to_ascii(data)
         if data is None:
             return None
-        sql = "INSERT INTO %s" % table_name
-        sql += "(id, %s) VALUES" % ', '.join(data.keys())
+        sql = f"INSERT INTO {table_name}"
+        sql += f"(id, {', '.join(data.keys())}) VALUES"
         sql += "(NULL, "
         sql += ', '.join(['?'] * len(data.values()))
-        sql = "%s);" % sql
+        sql = f"{sql});"
         params = data.values()
         self.raw_sql(sql, params)
 
@@ -137,9 +135,7 @@ class TyORM():
         if columns is None or columns == "*":
             sql = "PRAGMA table_info(\"%s\");" % table_name
             results = self.raw_sql(sql)
-            columns = []
-            for result in results:
-                columns.append(result[1])
+            columns = [result[1] for result in results]
         if isinstance(columns, (list, tuple)):
             select_columns = columns
         elif isinstance(column, basestring):
@@ -149,14 +145,11 @@ class TyORM():
         if isinstance(select_columns, (list, tuple)) and select_columns:
             select_columns = ', '.join(select_columns)
 
-        original_columns = []
-        for i in columns:
-            original_columns.append("_%s" % i)
-
+        original_columns = [f"_{i}" for i in columns]
         return columns, select_columns, original_columns
 
     def select(self, table_name, columns=None, where=None, limit=None, \
-        order_by=None):
+            order_by=None):
         """select is your basic selection method"""
 
         columns, select_columns, original_columns = self.__parse_columns(
@@ -169,23 +162,24 @@ class TyORM():
         parameterized_attrs = None
         if where is not None:
             if not isinstance(where, (tuple, list)):
-                sql += " WHERE %s" % where
+                sql += f" WHERE {where}"
             else:
-                sql += "WHERE %s" % where[0]
+                sql += f"WHERE {where[0]}"
                 parameterized_attrs = where[1]
 
         if limit is not None:
-            sql += " LIMIT %s" % limit
+            sql += f" LIMIT {limit}"
 
         if order_by is not None:
-            sql += " ORDER BY %s" % order_by
+            sql += f" ORDER BY {order_by}"
 
         sql += ";"
 
-        if not parameterized_attrs:
-            results = self.raw_sql(sql)
-        else:
-            results = self.raw_sql(sql, parameterized_attrs)
+        results = (
+            self.raw_sql(sql, parameterized_attrs)
+            if parameterized_attrs
+            else self.raw_sql(sql)
+        )
 
         return_values = []
 
@@ -195,14 +189,12 @@ class TyORM():
                 del(data['id'])
             final_data = dict(
                 data.items() +\
-                dict(zip(original_columns, i)).items() + \
-                {"_table": table_name}.items()
+                    dict(zip(original_columns, i)).items() + \
+                    {"_table": table_name}.items()
             )
             return_values.append(final_data)
 
-        if not return_values:
-            return None
-        return return_values
+        return return_values or None
 
     ###########################################################################
     # Update methods
@@ -221,11 +213,11 @@ class TyORM():
             else:
                 updated_data[i] = data[i]
 
-        to_change = {}
-        for i in updated_data:
-            if i != "_table" and i != "_id":
-                if updated_data[i] != original_data["_%s" % i]:
-                    to_change[i] = updated_data[i]
+        to_change = {
+            i: updated_data[i]
+            for i, value in updated_data.items()
+            if i not in ["_table", "_id"] and value != original_data[f"_{i}"]
+        }
 
         sql = "UPDATE \"%s\" SET" % data["_table"]
 
@@ -233,7 +225,7 @@ class TyORM():
             return None
 
         for i in to_change:
-            sql += " %s=?," % i
+            sql += f" {i}=?,"
 
         sql = sql.strip(",")
 

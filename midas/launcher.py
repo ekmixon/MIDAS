@@ -62,12 +62,7 @@ SUPPORTED_LANGUAGES = [
 # Functions
 def log_line(log_name, line):
     """log_line accepts a line a returns a properly formatted log line"""
-    return "%s %s ty[%s]: %s" % (
-        DATE,
-        HOSTNAME,
-        log_name,
-        line,
-    )
+    return f"{DATE} {HOSTNAME} ty[{log_name}]: {line}"
 
 def send_syslog(msg):
     """send a log message to AlienVault"""
@@ -75,7 +70,7 @@ def send_syslog(msg):
 
 def spawn_module(module, current_lang, mod_name):
     """spawn_module executes an individual Tripyarn module"""
-    log_file = join(LOG_DIR, mod_name + ".log")
+    log_file = join(LOG_DIR, f"{mod_name}.log")
 
     command = list(chain(
         current_lang.execution_string.split(" "),

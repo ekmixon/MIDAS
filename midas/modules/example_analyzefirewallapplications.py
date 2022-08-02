@@ -30,16 +30,12 @@ class AnalyzeFirewallApplications(object):
         """
         Checks firewalled application state in the systems firewall
         """
-        alf = read_plist('/Library/Preferences/com.apple.alf.plist')
-        if alf:
-            applications = get_plist_key(alf, "applications")
-            if applications:
+        if alf := read_plist('/Library/Preferences/com.apple.alf.plist'):
+            if applications := get_plist_key(alf, "applications"):
                 for i in applications:
                     try:
                         name = i['bundleid']
                         state = str(i['state'])
-                    except KeyError:
-                        continue
                     except Exception:
                         continue
                     self.data.append({

@@ -38,17 +38,14 @@ def parse_date(line):
     Parse the date from a syslog line
     """
     try:
-        date = "%s %s" % (
-            str(datetime.today().year),
-            ' '.join(line.split(' ')[:3])
-        )
+        date = f"{str(datetime.now().year)} {' '.join(line.split(' ')[:3])}"
         ret = datetime.strptime(date, "%Y %b %d %H:%M:%S")
     except IOError:
         ret = None
     except Exception:
         ret = None
     if ret:
-        today = datetime.today()
+        today = datetime.now()
         if (ret.month > today.month) or\
         ((ret.month == today.month) and\
         (ret.day > today.day)):
@@ -87,7 +84,7 @@ def get_default_gateway_mac():
     ip_addr = get_default_gateway_ip()
     arp = shell_out("arp -an")
     for i in arp:
-        if ("(%s)" % ip_addr) in i:
+        if f"({ip_addr})" in i:
             return i.split(' ')[3]
 
 
@@ -98,10 +95,7 @@ def is_mac_addr(mac):
     """
     if type(mac) != 'str':
         return False
-    if re.match(r'([0-9A-F]{2}[:-]){5}([0-9A-F]{2})', mac, re.IGNORECASE):
-        return True
-    else:
-        return False
+    return bool(re.match(r'([0-9A-F]{2}[:-]){5}([0-9A-F]{2})', mac, re.IGNORECASE))
 
 
 def ssh_length():

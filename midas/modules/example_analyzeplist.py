@@ -33,10 +33,10 @@ class AnalyzePlist(object):
         self.check_keys_hash = Config.get("plist_check_keys_hash")
         self.hashes = self.gather_hashes()
         self.files = list_launch_agents() + list_launch_daemons() + \
-            list_app_info_plist() + list_plugin_info_plist() + \
-            list_current_host_pref_files()
+                list_app_info_plist() + list_plugin_info_plist() + \
+                list_current_host_pref_files()
         self.changed_files, self.new_files, \
-        self.same_files = self.bucket_files(
+            self.same_files = self.bucket_files(
             self.files,
             self.hashes,
         )
@@ -91,8 +91,7 @@ class AnalyzePlist(object):
         """
         Log the values of the launch agent/daemon keys in self.check_keys
         """
-        value = get_plist_key(self.plist_file, key)
-        if value:
+        if value := get_plist_key(self.plist_file, key):
             self.data[key.lower()] = str(to_ascii(value))
         else:
             self.data[key.lower()] = "KEY DNE"
@@ -102,10 +101,9 @@ class AnalyzePlist(object):
         Log the values of the launch agent/daemon keys in self.check_keys_hash
         """
         key = key.lower()
-        key_hash = "%s_hash" % (key.lower(), )
+        key_hash = f"{key.lower()}_hash"
 
-        value = get_plist_key(self.plist_file, key)
-        if value:
+        if value := get_plist_key(self.plist_file, key):
             try:
                 if isinstance(value, basestring):
                     # This should only get triggered by the Program key

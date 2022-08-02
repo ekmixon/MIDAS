@@ -28,10 +28,8 @@ class AnalyzeFirewallExceptions(object):
         """
         Checks the systems firewall exceptions
         """
-        alf = read_plist('/Library/Preferences/com.apple.alf.plist')
-        if alf:
-            exceptions = get_plist_key(alf, "exceptions")
-            if exceptions:
+        if alf := read_plist('/Library/Preferences/com.apple.alf.plist'):
+            if exceptions := get_plist_key(alf, "exceptions"):
                 for i in exceptions:
                     try:
                         self.data.append({
@@ -39,8 +37,6 @@ class AnalyzeFirewallExceptions(object):
                             "date": exec_date,
                             "state": str(i['state'])
                         })
-                    except OSError:
-                        pass
                     except Exception:
                         pass
 

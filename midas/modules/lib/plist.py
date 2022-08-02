@@ -54,15 +54,11 @@ def read_plist(plist_file):
     """
     try:
         output = readPlist(plist_file)
-    except OSError:
-        output = False
     except Exception:
         output = False
     if not output:
         try:
             output = read_plist_plutil(plist_file)
-        except OSError:
-            output = False
         except Exception:
             output = False
     return output
@@ -91,8 +87,6 @@ def read_plist_plutil(plist_file, format_type="json"):
     try:
         output = Popen(arg_array, stdout=PIPE, stderr=PIPE).communicate()[0]
         return loads(output)
-    except OSError:
-        return False
     except Exception:
         return False
 
@@ -203,10 +197,7 @@ def writePlistToString(rootObject, binary=True):
 def is_stream_binary_plist(stream):
     stream.seek(0)
     header = stream.read(7)
-    if header == 'bplist0':
-        return True
-    else:
-        return False
+    return header == 'bplist0'
 
 PlistTrailer = namedtuple(
     'PlistTrailer',
@@ -444,7 +435,7 @@ class HashableWrapper(object):
         self.value = value
 
     def __repr__(self):
-        return "<HashableWrapper: %s>" % [self.value]
+        return f"<HashableWrapper: {[self.value]}>"
 
 
 class BoolWrapper(object):
@@ -452,7 +443,7 @@ class BoolWrapper(object):
         self.value = value
 
     def __repr__(self):
-        return "<BoolWrapper: %s>" % self.value
+        return f"<BoolWrapper: {self.value}>"
 
 
 class PlistWriter(object):
@@ -527,27 +518,22 @@ class PlistWriter(object):
 
     def wrapRoot(self, root):
         if isinstance(root, bool):
-            if root is True:
-                return self.wrappedTrue
-            else:
-                return self.wrappedFalse
+            return self.wrappedTrue if root is True else self.wrappedFalse
         elif isinstance(root, set):
-            n = set()
-            for value in root:
-                n.add(self.wrapRoot(value))
+            n = {self.wrapRoot(value) for value in root}
             return HashableWrapper(n)
         elif isinstance(root, dict):
-            n = {}
-            for key, value in root.iteritems():
-                n[self.wrapRoot(key)] = self.wrapRoot(value)
+            n = {
+                self.wrapRoot(key): self.wrapRoot(value)
+                for key, value in root.iteritems()
+            }
+
             return HashableWrapper(n)
         elif isinstance(root, list):
-            n = []
-            for value in root:
-                n.append(self.wrapRoot(value))
+            n = [self.wrapRoot(value) for value in root]
             return HashableWrapper(n)
         elif isinstance(root, tuple):
-            n = tuple([self.wrapRoot(value) for value in root])
+            n = tuple(self.wrapRoot(value) for value in root)
             return HashableWrapper(n)
         else:
             return root
@@ -662,10 +648,12 @@ class PlistWriter(object):
         if obj is None:
             output += pack('!B', 0b00000000)
         elif isinstance(obj, BoolWrapper):
-            if obj.value is False:
-                output += pack('!B', 0b00001000)
-            else:
-                output += pack('!B', 0b00001001)
+            output += (
+                pack('!B', 0b00001000)
+                if obj.value is False
+                else pack('!B', 0b00001001)
+            )
+
         elif isinstance(obj, Uid):
             size = self.intSize(obj)
             output += pack('!B', (0b1000 << 4) | size - 1)
@@ -745,15 +733,16 @@ class PlistWriter(object):
             # but it is in Py3, where they don't.
             position = self.referencePositions.get(obj)
             if position is None:
-                raise InvalidPlistException("Error while writing offsets table. Object not found. %s" % obj)
+                raise InvalidPlistException(
+                    f"Error while writing offsets table. Object not found. {obj}"
+                )
+
             output += self.binaryInt(position, self.trailer.offsetSize)
             all_positions.append(position)
         return output
 
     def binaryReal(self, obj):
-        # just use doubles
-        result = pack('>d', obj)
-        return result
+        return pack('>d', obj)
 
     def binaryInt(self, obj, bytes=None):
         result = ''
